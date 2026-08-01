@@ -78,7 +78,7 @@ impl TripleStore for TripleStoreFS {
         
         //create if not exists
         self.create_tablefile_if_not_there(infotable_name.to_string());
-        file_tools::append_ln_to_file(infotriple, &self.get_table_path(infotable_name.to_string()));
+        file_tools::append_ln_to_file(infotriple, self.get_table_path(infotable_name.to_string()).into());
     }
 
     fn get_info_table(&mut self, infotable_name: &str) -> String {
