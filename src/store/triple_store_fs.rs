@@ -86,17 +86,17 @@ impl TripleStore for TripleStoreFS {
 
         fs::read_to_string(
         self.get_table_path(infotable_name.to_string()))
-        .expect("something wetn wrong reading info table text file")
+        .expect("info table file missing or unreadable - was create_tablefile_if_not_there() run?")
     }
 
     fn select_from_info_table(&mut self, infotable_name: &str, where_id: &str) -> String {
-        
+
         self.create_tablefile_if_not_there(infotable_name.to_string());
 
-        fs::read_to_string(self.get_table_path(infotable_name.to_string()))    
-            .expect("something wetn wrong reading info table text file")
+        fs::read_to_string(self.get_table_path(infotable_name.to_string()))
+            .expect("info table file missing or unreadable - was create_tablefile_if_not_there() run?")
             .lines()
-            .filter(|x| { 
+            .filter(|x| {
                 #[cfg(test)]
                 println!("new{}",x);
                 x.split_once(' ')
@@ -104,9 +104,11 @@ impl TripleStore for TripleStoreFS {
                 .1
                 .contains(where_id)
             })
-            .fold("".to_string(),
-                |acc, y|
-                format!( "{}{}{}", acc, y, "\n"))
+            .fold(String::new(), |mut acc, y| {
+                acc.push_str(y);
+                acc.push('\n');
+                acc
+            })
     }
 
     fn clear_infotable(&mut self, infotable_name: String) {

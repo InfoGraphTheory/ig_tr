@@ -79,8 +79,7 @@ impl TrServiceFS {
 
     pub fn clear_infotable_guest_space(&mut self, infotable_name: String, space_id: String) {
         self.director.triples.storage.set_tmp_space_id(space_id);
-        let result = self.clear_infotable(infotable_name);
+        self.clear_infotable(infotable_name);
         self.director.triples.storage.revert_space_id();
-        result
     }
 }

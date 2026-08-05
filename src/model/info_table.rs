@@ -27,7 +27,7 @@ impl InfoTable {
     /// Private add method used by other public add methods.
     ///
     fn add(&mut self, id: &str, id1: &str, id2: &str) -> Result<String, Box<dyn Error>>{
-        if let None = self.get_info_triple(id) {
+        if self.get_info_triple(id).is_none() {
             self.rows.insert(id.to_string(), (id1.to_string(), id2.to_string()));
             Ok(String::from(id))
         } else {
@@ -88,20 +88,19 @@ impl InfoTable {
     /// Returns an Option which contains an InfoTriple corresponnding to the parameter id, if such InfoTriple
     /// exists.
     ///
-    pub fn get_info_triple(&mut self, id: &str) -> Option<InfoTriple> {
-        let tuple: &mut (String,String) = &mut self.rows.get_mut(id)?.clone();
+    pub fn get_info_triple(&self, id: &str) -> Option<InfoTriple> {
+        let (id1, id2) = self.rows.get(id)?.clone();
 
         Some(InfoTriple{
             id: id.to_string(),
-            id1: tuple.0.as_mut_str().to_string(),
-            id2: tuple.1.as_mut().to_string(),
+            id1,
+            id2,
         })
     }
 
-    pub fn get_info_triples(&mut self) -> Vec<InfoTriple> {
+    pub fn get_info_triples(&self) -> Vec<InfoTriple> {
 
         self.rows
-            .clone()
             .keys()
             .map(|id|self.get_info_triple(id).unwrap())
             .collect()
@@ -222,7 +221,7 @@ impl InfoTable {
     /// This method is practical when you want to use an IDs pairings and want to check for
     /// decorations for possible filters for example.
     ///
-    pub fn get_neighbor_ids_and_triple_ids(&mut self, reffered_id: String) -> HashMap<String,String> {
+    pub fn get_neighbor_ids_and_triple_ids(&self, reffered_id: String) -> HashMap<String,String> {
         let mut result: HashMap<String,String> = HashMap::new();
         self.get_neighbor_triple_ids_only(reffered_id.clone())
             .iter()
@@ -273,7 +272,7 @@ impl InfoTable {
             .collect()
     }
 
-    pub fn get_neighbors_except_decorated_and_not(&mut self, id: String, except_decoration: String, not: String) -> InfoTable{
+    pub fn get_neighbors_except_decorated_and_not(&self, id: String, except_decoration: String, not: String) -> InfoTable{
 
         self.get_neighbors_except_decorated(id, except_decoration)
             .into_iter()
@@ -287,15 +286,14 @@ impl InfoTable {
     /// with the ID in focus. When we talk about decorations we are talking about the neighbors of the
     /// triple IDs of the triples containing the pairings of the ID in focus.
     ///
-    pub fn get_neighbors_except_decorated(&mut self, id: String, except_decoration: String) -> InfoTable{
+    pub fn get_neighbors_except_decorated(&self, id: String, except_decoration: String) -> InfoTable{
 
         self.get_neighbor_triple_ids_only(id.clone())
             .iter()
-            .filter(|x|{!self.clone().has_neighbor(x.to_string(), except_decoration.to_string())})
+            .filter(|x|{!self.has_neighbor(x.to_string(), except_decoration.to_string())})
             .map(|x| {
 //                println!("id {} has filtered nabour {}",id.clone(), x.clone());
-                self.clone()
-                    .get_info_triple(x)
+                self.get_info_triple(x)
                     .unwrap()
             })
             .collect()
@@ -316,7 +314,7 @@ impl IntoIterator for InfoTable {
     type Item = InfoTriple;
     type IntoIter = IntoIter<InfoTriple>;
 
-    fn into_iter(mut self) -> IntoIter<InfoTriple> {
+    fn into_iter(self) -> IntoIter<InfoTriple> {
     
         let mut vec = self.get_info_triples();
         vec.sort();
@@ -477,7 +475,7 @@ fn add_info_table_test() {
         let _ = it.add("id-c", "id1-c", "id1-b");
         let _ = it.add("id-d", "id1-d", "id2-d");
 
-        let mut triple = it.get_info_triple(reffered_id.as_str());
+        let triple = it.get_info_triple(reffered_id.as_str());
 
         assert_eq!(
             triple.clone().unwrap().id,
@@ -492,8 +490,8 @@ fn add_info_table_test() {
             String::from("id2-b")
         );
 
-        let reffered_id: String = String::from("id1-b"); 
-        let mut triple = it.get_info_triple(reffered_id.as_str());
+        let reffered_id: String = String::from("id1-b");
+        let triple = it.get_info_triple(reffered_id.as_str());
         assert!(
             triple.is_none()
         );
@@ -816,7 +814,7 @@ fn get_neighbors_except_decorated_test() {
     let _ = it.add("id-f", "focus_id", "id2-a");
     let _ = it.add("id-g", "exp_dec", "id2-d");
 
-    let mut neighbors_except_decorated = it.get_neighbors_except_decorated(id, except_decoration);
+    let neighbors_except_decorated = it.get_neighbors_except_decorated(id, except_decoration);
     let mut neighbors_except_decorated = neighbors_except_decorated.get_info_triples();
     neighbors_except_decorated.sort();
     let mut iter = neighbors_except_decorated.iter();
