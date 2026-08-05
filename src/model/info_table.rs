@@ -72,15 +72,8 @@ impl InfoTable {
 
     ///
     /// Checks to see if a vertex within the InfoTable has an edge to the candidate vertex.
-    fn has_neighbor(&self, id: String, candidate: String) -> bool {
-        let mut result: bool = false;
-        self.get_neighbor_ids(id.clone())
-            .iter()
-            .for_each(|x|{
-//            println!("neighbor {} to {}",x,id.clone());
-            if *x == candidate {result = true;}
-        });
-        result
+    fn has_neighbor(&self, id: &str, candidate: &str) -> bool {
+        self.get_neighbor_ids(id).iter().any(|x| x == candidate)
     }
 
 
@@ -112,7 +105,7 @@ impl InfoTable {
     /// certain ID. In other words the subset of the current InfoTable for all relations a
     /// certain ID has.
     ///
-    pub fn get_neighbors_as_triples(&self, id: String) -> InfoTable {
+    pub fn get_neighbors_as_triples(&self, id: &str) -> InfoTable {
         let mut refs = InfoTable::new();
         self
             .rows   
@@ -180,11 +173,10 @@ impl InfoTable {
     /// This method is useful if you have an InfoTable containing only triples referring to a specific id and you want
     /// those referring ids without the triple ids and without the referred id itself.
     ///
-    pub fn flatten_id1_y_id2_only_except(&self, except: String) -> Vec<String> {
+    pub fn flatten_id1_y_id2_only_except(&self, except: &str) -> Vec<String> {
         self.flatten_id1_y_id2_only()
-            .iter()
-            .filter(|x|x.to_string()!=except)
-            .map(|x|x.to_string())
+            .into_iter()
+            .filter(|x| x.as_str() != except)
             .collect()
     }
     
@@ -207,7 +199,7 @@ impl InfoTable {
     ///
     /// This method returns the triple IDs of the relationships a reffered_id has.
     ///
-    pub fn get_neighbor_triple_ids_only(&self, reffered_id: String) -> Vec<String> {
+    pub fn get_neighbor_triple_ids_only(&self, reffered_id: &str) -> Vec<String> {
         self.get_neighbors_as_triples(reffered_id)
             .flatten_triples_ids_only()
     }
@@ -221,16 +213,16 @@ impl InfoTable {
     /// This method is practical when you want to use an IDs pairings and want to check for
     /// decorations for possible filters for example.
     ///
-    pub fn get_neighbor_ids_and_triple_ids(&self, reffered_id: String) -> HashMap<String,String> {
+    pub fn get_neighbor_ids_and_triple_ids(&self, reffered_id: &str) -> HashMap<String,String> {
         let mut result: HashMap<String,String> = HashMap::new();
-        self.get_neighbor_triple_ids_only(reffered_id.clone())
+        self.get_neighbor_triple_ids_only(reffered_id)
             .iter()
             .for_each(|id3|{
                 let it = self.get_info_triple(id3).unwrap();
-                result.insert(id3.to_string(), it.other_half(reffered_id.clone()).unwrap());
+                result.insert(id3.to_string(), it.other_half(reffered_id).unwrap());
             });
-    
-            result    
+
+        result
     }
 
 
@@ -238,19 +230,18 @@ impl InfoTable {
     /// Returns a Vec containing the all the IDs that the reffered_id has been paired with so
     /// neighbors in a graph context.
     ///
-    pub fn get_neighbor_ids(&self, reffered_id: String) -> Vec<String> {
-        self.get_neighbors_as_triples(reffered_id.clone())
+    pub fn get_neighbor_ids(&self, reffered_id: &str) -> Vec<String> {
+        self.get_neighbors_as_triples(reffered_id)
             .flatten_id1_y_id2_only_except(reffered_id)
     }
 
     ///
     /// Returns all refs to the specified id except for the one specified as parameter.
-    /// 
-    pub fn get_neighbor_ids_except(&self, id: String, except: String) -> Vec<String>{
+    ///
+    pub fn get_neighbor_ids_except(&self, id: &str, except: &str) -> Vec<String>{
         self.get_neighbor_ids(id)
-            .iter()
-            .filter(|x|{**x!=except})
-            .map(|x|{x.to_string()})
+            .into_iter()
+            .filter(|x| x != except)
             .collect()
     }
 
@@ -262,21 +253,20 @@ impl InfoTable {
     /// neighbor_id and a
     /// decoration_id to match.
     ///
-    pub fn get_neighbors_w_neighbor(&self, id: String, neighbors_neighbor_id: String) -> Vec<String>{
+    pub fn get_neighbors_w_neighbor(&self, id: &str, neighbors_neighbor_id: &str) -> Vec<String>{
         self.get_neighbor_ids(id)
-            .iter()
-            .filter(|x|{self.has_neighbor(x.to_string(), neighbors_neighbor_id.clone())})
+            .into_iter()
         //TODO::probably worng because decoration is on the triple id and hence we cannot use vecs,
         //but infotables.
-            .map(|x|x.to_string())
+            .filter(|x| self.has_neighbor(x, neighbors_neighbor_id))
             .collect()
     }
 
-    pub fn get_neighbors_except_decorated_and_not(&self, id: String, except_decoration: String, not: String) -> InfoTable{
+    pub fn get_neighbors_except_decorated_and_not(&self, id: &str, except_decoration: &str, not: &str) -> InfoTable{
 
         self.get_neighbors_except_decorated(id, except_decoration)
             .into_iter()
-            .filter(|x|{!x.is_paired_with(not.clone())})
+            .filter(|x| !x.is_paired_with(not))
             .collect()
     }
 
@@ -286,13 +276,12 @@ impl InfoTable {
     /// with the ID in focus. When we talk about decorations we are talking about the neighbors of the
     /// triple IDs of the triples containing the pairings of the ID in focus.
     ///
-    pub fn get_neighbors_except_decorated(&self, id: String, except_decoration: String) -> InfoTable{
+    pub fn get_neighbors_except_decorated(&self, id: &str, except_decoration: &str) -> InfoTable{
 
-        self.get_neighbor_triple_ids_only(id.clone())
+        self.get_neighbor_triple_ids_only(id)
             .iter()
-            .filter(|x|{!self.has_neighbor(x.to_string(), except_decoration.to_string())})
+            .filter(|x| !self.has_neighbor(x, except_decoration))
             .map(|x| {
-//                println!("id {} has filtered nabour {}",id.clone(), x.clone());
                 self.get_info_triple(x)
                     .unwrap()
             })
@@ -512,7 +501,7 @@ pub fn get_neighbors_as_triples_test() {
     let _ = it.add("id-c", "id1-c", "id1-b");
     let _ = it.add("id-d", "id1-d", "id2-d");
 
-    let relations = it.get_neighbors_as_triples(reffered_id);
+    let relations = it.get_neighbors_as_triples(&reffered_id);
         
     let mut iter = relations.rows.clone().into_keys().collect::<Vec<String>>();
     iter.sort();
@@ -622,7 +611,7 @@ pub fn flatten_id1_y_id2_only_except_test() {
     let _ = it.add("id-a", "id1-a", "id2-a");
     let _ = it.add("id-b", "id1-b", "id2-b");
 
-    let mut it = it.flatten_id1_y_id2_only_except("id1-b".to_string()); 
+    let mut it = it.flatten_id1_y_id2_only_except("id1-b");
     it.sort();
     let mut it = it.iter();
 
@@ -690,7 +679,7 @@ pub fn flatten_triples_ids_only_test() {
         let _ = it.add("id-c", "id1-c", "id1-b");
         let _ = it.add("id-d", "id1-d", "id2-d");
 
-        let mut triple_ids = it.get_neighbor_triple_ids_only(reffered_id);
+        let mut triple_ids = it.get_neighbor_triple_ids_only(&reffered_id);
         triple_ids.sort();
         let mut it = triple_ids.iter();
 
@@ -724,7 +713,7 @@ pub fn flatten_triples_ids_only_test() {
         let _ = it.add("id-c", "id1-c", "id1-b");
         let _ = it.add("id-d", "id1-d", "id2-d");
 
-        let mut triple_ids = it.get_neighbor_ids(reffered_id);
+        let mut triple_ids = it.get_neighbor_ids(&reffered_id);
         triple_ids.sort();
         let mut it = triple_ids.iter();
 
@@ -755,7 +744,7 @@ pub fn flatten_triples_ids_only_test() {
         let _ = it.add("id-c", "id1-c", "id1-b");
         let _ = it.add("id-d", "id1-d", "id2-d");
 
-        let mut triple_ids = it.get_neighbor_ids_except(reffered_id, except_id);
+        let mut triple_ids = it.get_neighbor_ids_except(&reffered_id, &except_id);
         triple_ids.sort();
         let mut it = triple_ids.iter();
 
@@ -785,7 +774,7 @@ fn get_neighbors_w_neighbor_test() {
     let _ = it.add("id-g", "id1-d", "id2-b");
     let _ = it.add("id-h", "id2-b", "id2-d");
 
-    let mut neighbors_w_neighbor = it.get_neighbors_w_neighbor(id, neighbors_neighbor_id);
+    let mut neighbors_w_neighbor = it.get_neighbors_w_neighbor(&id, &neighbors_neighbor_id);
     neighbors_w_neighbor.sort();    
     let mut iter = neighbors_w_neighbor.iter();
 
@@ -814,7 +803,7 @@ fn get_neighbors_except_decorated_test() {
     let _ = it.add("id-f", "focus_id", "id2-a");
     let _ = it.add("id-g", "exp_dec", "id2-d");
 
-    let neighbors_except_decorated = it.get_neighbors_except_decorated(id, except_decoration);
+    let neighbors_except_decorated = it.get_neighbors_except_decorated(&id, &except_decoration);
     let mut neighbors_except_decorated = neighbors_except_decorated.get_info_triples();
     neighbors_except_decorated.sort();
     let mut iter = neighbors_except_decorated.iter();
@@ -851,9 +840,9 @@ fn has_neighbor_test() {
     let _ = it.add("id-c", "id1-c", "id1-b");
     let _ = it.add("id-d", "id1-d", "id2-d");
 
-    assert!(it.has_neighbor(id.clone(), candidate1));
-    assert!(it.has_neighbor(id.clone(), candidate2));
-    assert!(!it.has_neighbor(id.clone(), candidate3));
+    assert!(it.has_neighbor(&id, &candidate1));
+    assert!(it.has_neighbor(&id, &candidate2));
+    assert!(!it.has_neighbor(&id, &candidate3));
 
 }
 

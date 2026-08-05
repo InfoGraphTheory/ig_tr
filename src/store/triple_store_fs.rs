@@ -123,17 +123,26 @@ impl TripleStore for TripleStoreFS {
     }
 }
 
-//TODO: some day figure out a general way to setup test data files to ensure sameness and/or independence of test
-//data files.
 #[test]
 fn select_from_space_info_table_test() {
-    
+
     let infotable_name = String::from("main_table");
     let where_id = String::from("5fe9374c5e9e27ebb78f8bf7cd78bbb23ee51e672dc54c603ec1c5b3eef33feb");
-    
+
     let mut ts = TripleStoreFS::new("84468de1424085f127ebd262b1d25df0c8196077ebfe76bb02c9deaf09687dee".to_string());
+
+    // Seed deterministic fixture data rather than depending on a pre-existing file outside
+    // git (previously this test only passed if `infospace/` already had this exact content).
+    // append_ln_to_file prepends rather than appends, so lines are seeded in reverse of the
+    // expected read-back order.
+    ts.clear_infotable(infotable_name.clone());
+    ts.append_info_table(&infotable_name, "aa7a71807a173ef427c94f84cc78aa3e3b636841fbaee18c329682f9e2939185 5fe9374c5e9e27ebb78f8bf7cd78bbb23ee51e672dc54c603ec1c5b3eef33feb 687a862f09e4721d70108ae9e2dd7c595ade9f40e9297a29f479073cf97301a2");
+    ts.append_info_table(&infotable_name, "004580ab93a9c16797e1a6ede5b0ab1949c253fb9fb7374d5e6088adf9b18f2d 2bac5b3da5fb1ecde9e3b433a91515e2efbc908010f461d0fc9014edd74b29f4 5fe9374c5e9e27ebb78f8bf7cd78bbb23ee51e672dc54c603ec1c5b3eef33feb");
+    ts.append_info_table(&infotable_name, "cfe94de90878b723efdb311090465f2158798c3e9c21e82ac1582190290f756e 38a24bbddca56373b49d0452f5e485c11048c729d9230beb2fa41044a36e9791 5fe9374c5e9e27ebb78f8bf7cd78bbb23ee51e672dc54c603ec1c5b3eef33feb");
+    ts.append_info_table(&infotable_name, "unrelatedtripleid unrelatedid1 unrelatedid2");
+
     let result_fn = ts.select_from_info_table(&infotable_name, &where_id);
-    let mut result_goal: String = 
+    let mut result_goal: String =
 "cfe94de90878b723efdb311090465f2158798c3e9c21e82ac1582190290f756e 38a24bbddca56373b49d0452f5e485c11048c729d9230beb2fa41044a36e9791 5fe9374c5e9e27ebb78f8bf7cd78bbb23ee51e672dc54c603ec1c5b3eef33feb".to_string();
     result_goal.push('\n');
     result_goal.push_str("004580ab93a9c16797e1a6ede5b0ab1949c253fb9fb7374d5e6088adf9b18f2d 2bac5b3da5fb1ecde9e3b433a91515e2efbc908010f461d0fc9014edd74b29f4 5fe9374c5e9e27ebb78f8bf7cd78bbb23ee51e672dc54c603ec1c5b3eef33feb");

@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::error::Error;
 
 
 #[derive(Clone, Debug, Eq)]
@@ -31,22 +32,18 @@ impl InfoTriple {
         [self.id.clone(), self.id1.clone(), self.id2.clone()]
     }
 
-    pub fn other_half(&self, id_x: String) -> Result<String, String> {
-        match id_x {
-            x if x == self.id1 =>  Ok(self.id2.clone()),
-            x if x == self.id2 =>  Ok(self.id1.clone()),
-            _ => std::result::Result::Err(
-                format!("id_x:{} is not id1:{} or id2:{} so we cannot find its other half!", id_x, self.id1, self.id2)
-            ),
+    pub fn other_half(&self, id_x: &str) -> Result<String, Box<dyn Error>> {
+        if id_x == self.id1 {
+            Ok(self.id2.clone())
+        } else if id_x == self.id2 {
+            Ok(self.id1.clone())
+        } else {
+            Err(format!("id_x:{} is not id1:{} or id2:{} so we cannot find its other half!", id_x, self.id1, self.id2).into())
         }
     }
-    
-    pub fn is_paired_with(&self, id_x: String) -> bool {
-        match id_x {
-            x if x == self.id1 => true,
-            x if x == self.id2 => true,
-            _ => false,
-        } 
+
+    pub fn is_paired_with(&self, id_x: &str) -> bool {
+        id_x == self.id1 || id_x == self.id2
     }
 }
 
