@@ -151,7 +151,46 @@ fn select_from_space_info_table_test() {
     result_goal.push('\n');
 //    println!("result_fn:{}", result_fn);
 //    println!("result_goal:{}", result_goal);
-     assert_eq!(result_fn,result_goal);   
+     assert_eq!(result_fn,result_goal);
+}
+
+#[test]
+fn append_and_get_info_table_round_trips() {
+    let mut ts = TripleStoreFS::new(format!("ig_tr_test_store_append_{}", std::process::id()));
+    let table_name = "main_table".to_string();
+    ts.clear_infotable(table_name.clone());
+
+    ts.append_info_table(&table_name, "t1 a b");
+    ts.append_info_table(&table_name, "t2 c d");
+
+    let content = ts.get_info_table(&table_name);
+    assert!(content.contains("t1 a b"));
+    assert!(content.contains("t2 c d"));
+}
+
+#[test]
+fn clear_infotable_empties_an_existing_file() {
+    let mut ts = TripleStoreFS::new(format!("ig_tr_test_store_clear_{}", std::process::id()));
+    let table_name = "main_table".to_string();
+    ts.append_info_table(&table_name, "t1 a b");
+
+    ts.clear_infotable(table_name.clone());
+
+    assert_eq!(ts.get_info_table(&table_name), "");
+}
+
+#[test]
+fn get_space_id_falls_back_to_org_space_until_set_tmp_space_id_is_called() {
+    let org_space = format!("ig_tr_test_store_space_{}", std::process::id());
+    let mut ts = TripleStoreFS::new(org_space.clone());
+
+    assert_eq!(ts.get_space_id(), org_space);
+
+    ts.set_tmp_space_id("a-different-space".to_string());
+    assert_eq!(ts.get_space_id(), "a-different-space");
+
+    ts.revert_space_id();
+    assert_eq!(ts.get_space_id(), org_space);
 }
 
 

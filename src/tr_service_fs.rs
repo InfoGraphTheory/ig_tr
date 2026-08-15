@@ -83,3 +83,67 @@ impl TrServiceFS {
         self.director.triples.storage.revert_space_id();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Pairing pattern: create_infotriple records a pairing between two ids, and
+    // get_all_info_triples_from_info_table reads pairings back.
+    #[test]
+    fn create_infotriple_and_read_back_from_info_table() {
+        let space_id = format!("ig_tr_test_service_create_{}", std::process::id());
+        let mut service = TrServiceFS::new(space_id);
+        service.clear_infotable("main_table".to_string());
+
+        let cat_tag = "cat-tag".to_string();
+        let triple = service.create_infotriple("widget-1".to_string(), cat_tag.clone());
+
+        // create_infotriple hashes id1/id2 via ig_tools::hashing_tools::concat_n_hash, which
+        // sorts the pair lexicographically before hashing - so id1/id2 on the resulting triple
+        // aren't necessarily in the order passed in. Check pairing, not position.
+        let triples = service.get_all_info_triples_from_info_table("main_table".to_string());
+        assert!(triples.iter().any(|t| t.id == triple.id && t.is_paired_with("widget-1") && t.is_paired_with(&cat_tag)));
+    }
+
+    #[test]
+    fn new_sets_space_id_and_org_space_id_to_the_same_value() {
+        let space_id = format!("ig_tr_test_service_new_{}", std::process::id());
+        let service = TrServiceFS::new(space_id.clone());
+        assert_eq!(service.space_id, space_id);
+        assert_eq!(service.org_space_id, space_id);
+    }
+
+    // Note: space_id/set_tmp_space_id/revert_space_id here are plain bookkeeping on TrServiceFS
+    // itself - they do not affect which space storage operations actually hit. The
+    // *_guest_space methods below reach into `director.triples.storage` directly instead of
+    // using self.space_id. This test documents current behavior rather than a routing guarantee.
+    #[test]
+    fn set_tmp_space_id_and_revert_space_id_round_trip() {
+        let space_id = format!("ig_tr_test_service_revert_{}", std::process::id());
+        let mut service = TrServiceFS::new(space_id.clone());
+
+        service.set_tmp_space_id("some-other-space".to_string());
+        assert_eq!(service.space_id, "some-other-space");
+
+        service.revert_space_id();
+        assert_eq!(service.space_id, space_id);
+    }
+
+    #[test]
+    fn guest_space_operations_do_not_leak_into_the_org_space() {
+        let space_id = format!("ig_tr_test_service_guest_org_{}", std::process::id());
+        let guest_space_id = format!("ig_tr_test_service_guest_other_{}", std::process::id());
+        let mut service = TrServiceFS::new(space_id);
+        service.clear_infotable("main_table".to_string());
+        service.clear_infotable_guest_space("main_table".to_string(), guest_space_id.clone());
+
+        service.create_infotriple_guest_space("guest-widget".to_string(), "cat-tag".to_string(), guest_space_id.clone());
+
+        let org_triples = service.get_all_info_triples_from_info_table("main_table".to_string());
+        assert!(org_triples.iter().all(|t| !t.is_paired_with("guest-widget")));
+
+        let guest_triples = service.get_all_info_triples_from_info_table_guest_space("main_table".to_string(), guest_space_id);
+        assert!(guest_triples.iter().any(|t| t.is_paired_with("guest-widget")));
+    }
+}
