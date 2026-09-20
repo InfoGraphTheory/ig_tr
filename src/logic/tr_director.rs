@@ -55,36 +55,39 @@ mod tests {
         let mut director = new_director(&space_id);
         director.clear_infotable("main_table".to_string());
 
-        // "a" and "b" are already in sorted order, so create_triple's internal sort-before-hash
+        let id1 = "a".repeat(64);
+        let id2 = "b".repeat(64);
+        // id1 and id2 are already in sorted order, so create_triple's internal sort-before-hash
         // (ig_tools::hashing_tools::concat_n_hash) is a no-op here and id1/id2 come back as-given.
-        let triple = director.create_triple("a".to_string(), "b".to_string());
+        let triple = director.create_triple(id1.clone(), id2.clone());
 
         let stored = director.get_all_info_triples_from_info_table("main_table".to_string());
         assert!(stored.iter().any(|t| t.id == triple.id));
-        assert_eq!(triple.id1, "a");
-        assert_eq!(triple.id2, "b");
+        assert_eq!(triple.id1, id1);
+        assert_eq!(triple.id2, id2);
     }
 
     #[test]
     fn create_triple_is_order_independent_because_inputs_get_sorted_before_hashing() {
         // Vital property: create_triple hashes id1/id2 via concat_n_hash, which sorts the pair
         // lexicographically before hashing. So calling it with the pair already in sorted order
-        // ("a", "b") and calling it with the pair reversed ("b", "a") must produce the exact
-        // same triple (same id, and id1/id2 normalized to the same sorted order) - otherwise the
-        // same unordered relationship could be recorded twice under two different triple ids
-        // depending on argument order.
+        // and calling it with the pair reversed must produce the exact same triple (same id, and
+        // id1/id2 normalized to the same sorted order) - otherwise the same unordered relationship
+        // could be recorded twice under two different triple ids depending on argument order.
         let space_id = format!("ig_tr_test_director_order_independence_{}", std::process::id());
         let mut director = new_director(&space_id);
         director.clear_infotable("main_table".to_string());
 
-        let already_ordered = director.create_triple("a".to_string(), "b".to_string());
-        let needs_ordering = director.create_triple("b".to_string(), "a".to_string());
+        let id_a = "a".repeat(64);
+        let id_b = "b".repeat(64);
+        let already_ordered = director.create_triple(id_a.clone(), id_b.clone());
+        let needs_ordering = director.create_triple(id_b.clone(), id_a.clone());
 
         assert_eq!(already_ordered.id, needs_ordering.id);
         assert_eq!(already_ordered.id1, needs_ordering.id1);
         assert_eq!(already_ordered.id2, needs_ordering.id2);
-        assert_eq!(already_ordered.id1, "a");
-        assert_eq!(already_ordered.id2, "b");
+        assert_eq!(already_ordered.id1, id_a);
+        assert_eq!(already_ordered.id2, id_b);
     }
 
     #[test]

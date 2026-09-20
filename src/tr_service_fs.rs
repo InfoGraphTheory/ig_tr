@@ -96,14 +96,15 @@ mod tests {
         let mut service = TrServiceFS::new(space_id);
         service.clear_infotable("main_table".to_string());
 
-        let cat_tag = "cat-tag".to_string();
-        let triple = service.create_infotriple("widget-1".to_string(), cat_tag.clone());
+        let id = "c".repeat(64);
+        let cat_tag = "d".repeat(64);
+        let triple = service.create_infotriple(id.clone(), cat_tag.clone());
 
         // create_infotriple hashes id1/id2 via ig_tools::hashing_tools::concat_n_hash, which
         // sorts the pair lexicographically before hashing - so id1/id2 on the resulting triple
         // aren't necessarily in the order passed in. Check pairing, not position.
         let triples = service.get_all_info_triples_from_info_table("main_table".to_string());
-        assert!(triples.iter().any(|t| t.id == triple.id && t.is_paired_with("widget-1") && t.is_paired_with(&cat_tag)));
+        assert!(triples.iter().any(|t| t.id == triple.id && t.is_paired_with(&id) && t.is_paired_with(&cat_tag)));
     }
 
     #[test]
