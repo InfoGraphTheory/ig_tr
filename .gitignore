@@ -1,3 +1,6 @@
 allowed_signers
 publish
 publish-dry-run
+Cargo.lock
+target/
+infospace/
